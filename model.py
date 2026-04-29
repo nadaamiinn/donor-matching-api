@@ -1,3 +1,6 @@
+from utils import compute_distance_km
+
+
 def match_requests_priority(model, requests_df, donor_row, k=3):
 
     candidates = requests_df.copy()
@@ -27,7 +30,7 @@ def match_requests_priority(model, requests_df, donor_row, k=3):
         "غدا": 2,
         "اليوم": 3
     }.get(donor_row["availability"], 1)
-
+    
     # Location
     candidates["location_match"] = (
         candidates["location_requester"] == donor_row["location"]
@@ -51,11 +54,19 @@ def match_requests_priority(model, requests_df, donor_row, k=3):
     "urgency_score",
     "availability_score",
     "quantity_fit",
-    "trust_score"
+    "distance_score"
 ]
+    # distance
+    candidates["distance_km"] = candidates.apply(
+        lambda row: compute_distance_km(row, donor_row),
+        axis=1
+    )
 
+    candidates["distance_score"] = 1 / (1 + (candidates["distance_km"] / 50))
+    
     X = candidates[FEATURE_COLS]
     print(X.columns)
+
 
     # -------- Prediction --------
     candidates["predicted_score"] = model.predict(X)
