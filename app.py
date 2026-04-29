@@ -2,16 +2,26 @@ from fastapi import FastAPI
 import joblib
 import pandas as pd
 import uvicorn
-
+from contextlib import asynccontextmanager
 from model import match_requests_priority
 
-app = FastAPI()
+# قاموس لتخزين النموذج والبيانات بشكل آمن
+ml_assets = {}
 
-# load model
-model = joblib.load("model.pkl")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # تحميل الأصول عند بدء التشغيل
+    try:
+        ml_assets["model"] = joblib.load("model.pkl")
+        ml_assets["requests_df"] = pd.read_csv("requests.csv")
+        print("✅ تم تحميل النموذج والبيانات بنجاح!")
+    except Exception as e:
+        print(f"❌ خطأ في التحميل: {e}")
+    yield
+    # تنظيف الذاكرة عند الإغلاق
+    ml_assets.clear()
 
-# load data once 🔥
-requests_df = pd.read_csv("requests.csv")
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/")
 def home():
@@ -19,11 +29,13 @@ def home():
 
 @app.post("/match")
 def match(payload: dict):
-    global model
-    global requests_df
+    model = ml_assets.get("model")
+    requests_df = ml_assets.get("requests_df")
     
-    donor = payload["donor"]
+    if model is None or requests_df is None:
+        return {"error": "Application assets not loaded properly."}
 
+    donor = payload["donor"]
     results = match_requests_priority(model, requests_df, donor)
 
     return {"matches": results}
