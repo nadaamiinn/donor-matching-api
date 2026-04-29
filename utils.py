@@ -28,16 +28,14 @@ def get_coordinates(location_name):
         return None
 
 
-# def compute_distance_km(row, donor):
+def compute_distance_km(row, donor):
+    try:
+        loc1 = get_coordinates(row["location_requester"])
+        loc2 = get_coordinates(donor["location"])
 
-#     loc1 = get_coordinates(row["location_requester"])
+        if loc1 is None or loc2 is None:
+            return 9999
 
-#     if "lat" in donor and "lon" in donor:
-#         loc2 = (donor["lat"], donor["lon"])
-#     else:
-#         loc2 = get_coordinates(donor["location_donor"])
-
-#     if loc1 is None or loc2 is None:
-#         return 9999
-
-#     return geodesic(loc1, loc2).km
+        return geodesic(loc1, loc2).km
+    except:
+        return 9999

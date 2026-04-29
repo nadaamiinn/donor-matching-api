@@ -16,10 +16,10 @@ def match_requests_priority(model, requests_df, donor_row, k=3):
 
     # 3. Urgency
     candidates["urgency_score"] = candidates["urgency"].map({
-        "منخفض": 1,
-        "متوسط": 2,
-        "عاجل": 3
-    })
+    "منخفض": 1,
+    "متوسط": 2,
+    "عاجل": 3
+}).fillna(1)
 
     # 4. Availability
     candidates["availability_score"] = {
@@ -28,11 +28,13 @@ def match_requests_priority(model, requests_df, donor_row, k=3):
         "اليوم": 3
     }.get(donor_row["availability"], 1)
 
-    # 5. Location (simple & stable)
+    # Location
     candidates["location_match"] = (
         candidates["location_requester"] == donor_row["location"]
     ).astype(int)
 
+    candidates["trust_score"] = donor_row.get("trust_score", 0.5)
+    
     # -------- Filtering --------
     candidates = candidates[
         (candidates["need_match"] == 1) &
@@ -44,14 +46,16 @@ def match_requests_priority(model, requests_df, donor_row, k=3):
 
     # -------- Model Features --------
     FEATURE_COLS = [
-        "need_match",
-        "location_match",
-        "urgency_score",
-        "availability_score",
-        "quantity_fit"
-    ]
+    "need_match",
+    "location_match",
+    "urgency_score",
+    "availability_score",
+    "quantity_fit",
+    "trust_score"
+]
 
     X = candidates[FEATURE_COLS]
+    print(X.columns)
 
     # -------- Prediction --------
     candidates["predicted_score"] = model.predict(X)
